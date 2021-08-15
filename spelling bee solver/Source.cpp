@@ -4,18 +4,23 @@
 #include <sstream>
 #include <filesystem>
 #include <limits>
-#include <unordered_map>
+#include <chrono>
+#include <map>
+#include <set>
+#include <algorithm>
 
 int main() {
 	// check if wordlist exists
 	std::filesystem::path path("data\\wordlist.csv");
+	/*
 	if (!std::filesystem::exists(path.parent_path())) {
-		std::cout << "[+] adding missing directory \"data\\\"...";
+		std::cout << "[+] adding missing directory \"\\data\"...";
 		std::filesystem::create_directory(path.parent_path()); // create path if not found
 		std::cout << " done!\n\n";
 	}
-
+	*/
 	// validate wordlist.csv
+	/*
 	while (true) {
 		// check if file exists
 		if (!std::filesystem::exists(path)) {
@@ -41,82 +46,77 @@ int main() {
 		std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 		std::cout << std::endl;
 	}
-
-	// open file to read
+	*/
+	// open and parse wordlist.csv
 	std::fstream file(path, std::ios_base::in);
-
-	// store file in string
-	std::string line{};
-	std::string string_file{};
-	while (std::getline(file, line)) {
-		string_file.append(line.append(","));
-	}
-	file.close();
-
-	// parse file and separate words by letter
-	std::unordered_map<int, std::string> words{};
-	std::stringstream ss(string_file);
 	std::string cell{};
-	int count{};
-	while (std::getline(ss, cell, ',')) {
-		words[(int)cell[0]] += cell.append(",");
-		count++;
-	}
-	std::cout << count << " words in " << path.filename() << ".\n\n";
+	std::map<int, std::set<std::string>> word_list{};
+	while (std::getline(file, cell, ',')) { word_list[(int)cell[0]].insert(cell); }
+	file.close();
 
 	// main loop
 	while (true) {
-		// count of words found
-		count = 0;
-
 		// min and max size of words
-		int min{}, max{};
+		// int min{}, max{};
 
 		// user input
-		std::string ltrs;
 		std::cout << "Enter letters starting with the requried letter.\ninput: ";
-		std::getline(std::cin, ltrs);
+		std::string letters{};
+		std::getline(std::cin, letters);
+		std::cout << std::endl;
 
-		// find words which can be spelled with only the letters from ltrs in them
-		std::unordered_map<size_t, std::string> sort_words{};
-		for (std::size_t t{}; t < ltrs.length(); t++) {
-			ss.str(words[(int)ltrs[t]]);
-			ss.clear();
-			while (std::getline(ss, cell, ',')) {
-				// make sure word is four letters or longer
-				if (cell.length() >= 4) {
-					bool mis = false; // missing a letter from ltrs
-					bool req = false; // has required letter
-					for (size_t c1{}; c1 < cell.length(); c1++) {
-						for (size_t c2{}; c2 < ltrs.length(); c2++) {
-							if (cell[c1] == ltrs[c2]) {
-								mis = false;
-								c2 == 0 ? req = true : req = req;
+		// find words which can be spelled with only the letters from letters in them
+		std::set<std::string> matches{};
+		std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
+		for (size_t ltr{}; ltr < letters.length(); ltr++) {
+			// lambda func
+			auto search_set = [letters, &matches](const std::string& str) {
+				if (!(str.length() >= 4)) {
+					bool missing = false, required = false;
+					for (size_t chr1{}; chr1 < str.length(); chr1++) {
+						for (size_t chr2{}; chr2 < letters.length(); chr2++) {
+							if (str[chr1] == letters[chr2]) {
+								missing = false;
+								if (chr2 == 0 && (!required)) required = true;
 								break;
 							}
-							else mis = true;
+							else missing = true;
 						}
-						if (mis) break;
+						if (missing) break;
 					}
-					// print word if it meets the criteria
-					if ((!mis) && req) {
-						sort_words[cell.length()] += cell.append(",");
-						min == 0 ? min = cell.length() : min > cell.length() ? min = cell.length() : min = min;
-						max < cell.length() ? max = cell.length() : max = max;
-						count++;
-					}
+					if ((!missing) && required) matches.insert(str);
 				}
-			}
+			};
+
+			std::for_each(word_list[letters[ltr]].begin(), word_list[letters[ltr]].end(), search_set);
 		}
-		// print words by lenght
+		std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+		std::chrono::duration<double> time_span = std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
+		std::cout << "words found in " << time_span.count() << " secounds.\n\n";
+	}
+
+		// sort words by alpha order
+		/*
+		std::unordered_map<int, std::string> sort_words_ch{};
+		std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 		for (size_t t = min; t < max; t++) {
 			ss.str(sort_words[t]);
 			ss.clear();
+			while (getline(ss, cell, ',')) sort_words_ch[(int)cell[0]] += cell.append(",");
+		}
+		*/
+		// print words
+	/*
+		for (size_t t{}; t < ltrs.length(); t++) {
+			ss.str(sort_words_ch[(int)ltrs[t]]);
+			ss.clear();
 			while (getline(ss, cell, ',')) std::cout << cell << std::endl;
 		}
-
-		// print number of words found
-		std::cout << count << std::endl << std::endl;
-	}
+		*/
+		// print number of words found and time it took to find them
+		/*
+		std::chrono::duration<double> time_span = std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
+		std::cout << count << " words found in " << time_span.count() << " secounds.\n\n";
+		*/
 	return 0;
 }
