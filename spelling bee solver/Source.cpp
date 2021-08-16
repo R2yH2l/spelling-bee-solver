@@ -1,122 +1,90 @@
-#include <fstream>
-#include <iostream>
-#include <string>
-#include <sstream>
 #include <filesystem>
-#include <limits>
-#include <unordered_map>
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <chrono>
+#include <map>
+#include <set>
 
 int main() {
-	// check if wordlist exists
-	std::filesystem::path path("data\\wordlist.csv");
-	if (!std::filesystem::exists(path.parent_path())) {
-		std::cout << "[+] adding missing directory \"data\\\"...";
-		std::filesystem::create_directory(path.parent_path()); // create path if not found
-		std::cout << " done!\n\n";
-	}
+	// path to word_list.csv
+	std::filesystem::path path("data\\word_list.csv");
+	constexpr std::uintmax_t file_size = 1763167; // know valid file size
 
-	// validate wordlist.csv
+	// validate word_list.csv
 	while (true) {
-		// check if file exists
 		if (!std::filesystem::exists(path)) {
-			std::cout << "[!] " << path.filename() << " is missing please download the file from:\n"
-				<< "https://github.com/R2yH2l/spelling-bee-solver/tree/master/spelling%20bee%20solver/data\n"
-				<< "then place " << path.filename() << " into the directory:\n";
+			// create data dir if missing
+			if (!std::filesystem::exists(path.relative_path())) std::filesystem::create_directory(path.parent_path());
+			std::cout << "[!] " << path.string() << " is missing please download it from:\nhttps://github.com/R2yH2l/spelling-bee-solver/tree/master/spelling%20bee%20solver/data.\n\n";
 		}
-		// check if file is empty
-		else if (std::filesystem::file_size(path) == 0) {
-			std::cout << "[!] " << path.filename() << " is empty please download the file from:\n"
-				<< "https://github.com/R2yH2l/spelling-bee-solver/tree/master/spelling%20bee%20solver/data\n"
-				<< "then replace the existing " << path.filename() << " in the directory:\n";
+		else if (std::filesystem::is_empty(path)) {
+			std::cout << "[!] " << path.string() << " is empty please redownload it from:\nhttps://github.com/R2yH2l/spelling-bee-solver/tree/master/spelling%20bee%20solver/data.\n\n";
 		}
-		// check if file is missing data
-		// todo: allow for custom wordlists and validate csv format
-		else if (std::filesystem::file_size(std::filesystem::current_path() / path) != 1763167) {
-			std::cout << "[!] " << path.filename() << " has invalid data please download the file from:\n"
-				<< "https://github.com/R2yH2l/spelling-bee-solver/tree/master/spelling%20bee%20solver/data\n"
-				<< "then replace the existing " << path.filename() << " in the directory:\n";
+		else if (std::filesystem::file_size(path) != file_size) {
+			std::cout << "[-] " << path.string() << " has been alterded and the program might not work as intended.\n\n";
+			break;
 		}
 		else break;
-		std::cout << std::filesystem::current_path() / path.parent_path() << std::endl << "press enter when done...\n";
-		std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+
+		// user input
+		std::cout << "Press enter when done.";
+		std::string temp{};
+		std::getline(std::cin, temp);
 		std::cout << std::endl;
 	}
 
-	// open file to read
+	// open and parse word_list.csv
 	std::fstream file(path, std::ios_base::in);
-
-	// store file in string
-	std::string line{};
-	std::string string_file{};
-	while (std::getline(file, line)) {
-		string_file.append(line.append(","));
-	}
-	file.close();
-
-	// parse file and separate words by letter
-	std::unordered_map<int, std::string> words{};
-	std::stringstream ss(string_file);
+	std::map<int, std::set<std::string>> word_list{};
 	std::string cell{};
-	int count{};
-	while (std::getline(ss, cell, ',')) {
-		words[(int)cell[0]] += cell.append(",");
-		count++;
-	}
-	std::cout << count << " words in " << path.filename() << ".\n\n";
+	while (std::getline(file, cell, ',')) { word_list[(int)cell[0]].insert(cell); }
+	file.close();
 
 	// main loop
 	while (true) {
-		// count of words found
-		count = 0;
-
-		// min and max size of words
-		int min{}, max{};
-
 		// user input
-		std::string ltrs;
-		std::cout << "Enter letters starting with the requried letter.\ninput: ";
-		std::getline(std::cin, ltrs);
+		std::cout << "Enter seven letters starting with the requried letter.\ninput: ";
+		std::string letters{};
+		std::getline(std::cin, letters);
+		std::cout << std::endl;
 
-		// find words which can be spelled with only the letters from ltrs in them
-		std::unordered_map<size_t, std::string> sort_words{};
-		for (std::size_t t{}; t < ltrs.length(); t++) {
-			ss.str(words[(int)ltrs[t]]);
-			ss.clear();
-			while (std::getline(ss, cell, ',')) {
-				// make sure word is four letters or longer
-				if (cell.length() >= 4) {
-					bool mis = false; // missing a letter from ltrs
-					bool req = false; // has required letter
-					for (size_t c1{}; c1 < cell.length(); c1++) {
-						for (size_t c2{}; c2 < ltrs.length(); c2++) {
-							if (cell[c1] == ltrs[c2]) {
-								mis = false;
-								c2 == 0 ? req = true : req = req;
-								break;
-							}
-							else mis = true;
-						}
-						if (mis) break;
+		if (letters.length() == 7) {
+			// loop through letters in letters
+			std::map<int, std::set<std::string>> match_list{};
+
+			// get first time point
+			std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
+
+			// iterate through sets by letter
+			std::for_each(letters.begin(), letters.end(), [letters, &word_list, &match_list](const char ltr) {
+				// test if word is valid
+				std::for_each(word_list[ltr].begin(), word_list[ltr].end(), [letters, ltr, &match_list](const std::string& str) {
+					if (str.length() >= 4 &&
+						str.find_first_not_of(letters.c_str()) == std::string::npos &&
+						str.find_first_of(letters[0]) != std::string::npos) {
+						match_list[ltr].insert(str);
 					}
-					// print word if it meets the criteria
-					if ((!mis) && req) {
-						sort_words[cell.length()] += cell.append(",");
-						min == 0 ? min = cell.length() : min > cell.length() ? min = cell.length() : min = min;
-						max < cell.length() ? max = cell.length() : max = max;
-						count++;
 					}
+				);
 				}
-			}
-		}
-		// print words by lenght
-		for (size_t t = min; t < max; t++) {
-			ss.str(sort_words[t]);
-			ss.clear();
-			while (getline(ss, cell, ',')) std::cout << cell << std::endl;
-		}
+			);
 
-		// print number of words found
-		std::cout << count << std::endl << std::endl;
+			// time to find words in secounds
+			std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+			std::chrono::duration<double> time_span = std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
+
+			// print words in match_list
+			size_t word_count{};
+			std::for_each(letters.begin(), letters.end(), [letters, &word_list, &word_count, &match_list](const char ltr) {
+				std::for_each(match_list[ltr].begin(), match_list[ltr].end(), [](const std::string& str) { std::cout << str << std::endl; });
+				word_count += match_list[ltr].size();
+				});
+
+			// print word_count and time_span
+			std::cout << std::endl << word_count << " words found in " << time_span.count() << " secounds.\n\n";
+		}
+		else std::cout << "[-] you've entered " << (letters.length() < 7 ? "to few " : "to many ") << "letters seven are needed.\n\n";
 	}
 	return 0;
 }
