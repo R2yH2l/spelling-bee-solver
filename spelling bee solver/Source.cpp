@@ -71,7 +71,11 @@ int main() {
 		for (size_t ltr{}; ltr < letters.length(); ltr++) {
 			// lambda func
 			auto search_set = [letters, &matches](const std::string& str) {
-				if (!(str.length() >= 4)) {
+				if (str.find_first_not_of(letters.c_str()) == std::string::npos && str.length() >= 4) {
+					matches.insert(str);
+				}
+				/*
+				if (!(str.length() <= 4)) {
 					bool missing = false, required = false;
 					for (size_t chr1{}; chr1 < str.length(); chr1++) {
 						for (size_t chr2{}; chr2 < letters.length(); chr2++) {
@@ -86,12 +90,14 @@ int main() {
 					}
 					if ((!missing) && required) matches.insert(str);
 				}
+				*/
 			};
 
 			std::for_each(word_list[letters[ltr]].begin(), word_list[letters[ltr]].end(), search_set);
 		}
 		std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 		std::chrono::duration<double> time_span = std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
+		std::for_each(matches.begin(), matches.end(), [](const std::string& str) { std::cout << str << std::endl; });
 		std::cout << "words found in " << time_span.count() << " secounds.\n\n";
 	}
 
