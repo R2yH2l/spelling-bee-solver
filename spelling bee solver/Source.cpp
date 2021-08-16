@@ -7,47 +7,13 @@
 #include <set>
 
 int main() {
-	// check if wordlist exists
+	// path to wordlist.csv
 	std::filesystem::path path("data\\wordlist.csv");
-	/*
-	if (!std::filesystem::exists(path.parent_path())) {
-		std::cout << "[+] adding missing directory \"\\data\"...";
-		std::filesystem::create_directory(path.parent_path()); // create path if not found
-		std::cout << " done!\n\n";
-	}
-	*/
-	// validate wordlist.csv
-	/*
-	while (true) {
-		// check if file exists
-		if (!std::filesystem::exists(path)) {
-			std::cout << "[!] " << path.filename() << " is missing please download the file from:\n"
-				<< "https://github.com/R2yH2l/spelling-bee-solver/tree/master/spelling%20bee%20solver/data\n"
-				<< "then place " << path.filename() << " into the directory:\n";
-		}
-		// check if file is empty
-		else if (std::filesystem::file_size(path) == 0) {
-			std::cout << "[!] " << path.filename() << " is empty please download the file from:\n"
-				<< "https://github.com/R2yH2l/spelling-bee-solver/tree/master/spelling%20bee%20solver/data\n"
-				<< "then replace the existing " << path.filename() << " in the directory:\n";
-		}
-		// check if file is missing data
-		// todo: allow for custom wordlists and validate csv format
-		else if (std::filesystem::file_size(std::filesystem::current_path() / path) != 1763167) {
-			std::cout << "[!] " << path.filename() << " has invalid data please download the file from:\n"
-				<< "https://github.com/R2yH2l/spelling-bee-solver/tree/master/spelling%20bee%20solver/data\n"
-				<< "then replace the existing " << path.filename() << " in the directory:\n";
-		}
-		else break;
-		std::cout << std::filesystem::current_path() / path.parent_path() << std::endl << "press enter when done...\n";
-		std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-		std::cout << std::endl;
-	}
-	*/
+
 	// open and parse wordlist.csv
 	std::fstream file(path, std::ios_base::in);
-	std::string cell{};
 	std::map<int, std::set<std::string>> word_list{};
+	std::string cell{};
 	while (std::getline(file, cell, ',')) { word_list[(int)cell[0]].insert(cell); }
 	file.close();
 
@@ -59,49 +25,29 @@ int main() {
 		std::getline(std::cin, letters);
 		std::cout << std::endl;
 
-		// find words which can be spelled with only the letters from letters in them
-		std::set<std::string> matches{};
+		// loop through letters in letters
+		std::set<std::string> match_list{};
 		std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
 		for (size_t ltr{}; ltr < letters.length(); ltr++) {
-			// lambda func
-			auto search_set = [letters, &matches](const std::string& str) {
+			// test if word is valid
+			auto search_set = [letters, &match_list](const std::string& str) {
 				if (str.length() >= 4 &&
 					str.find_first_not_of(letters.c_str()) == std::string::npos &&
 					str.find_first_of(letters[0]) != std::string::npos) {
-					matches.insert(str);
+					match_list.insert(str);
 				}
 			};
-			// iterate through 
+
+			// iterate through sets by letter
 			std::for_each(word_list[letters[ltr]].begin(), word_list[letters[ltr]].end(), search_set);
 		}
+		// time taken to find words in secounds
 		std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 		std::chrono::duration<double> time_span = std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
-		std::for_each(matches.begin(), matches.end(), [](const std::string& str) { std::cout << str << std::endl; });
-		std::cout << matches.size() << " words found in " << time_span.count() << " secounds.\n\n";
-	}
 
-		// sort words by alpha order
-		/*
-		std::unordered_map<int, std::string> sort_words_ch{};
-		std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-		for (size_t t = min; t < max; t++) {
-			ss.str(sort_words[t]);
-			ss.clear();
-			while (getline(ss, cell, ',')) sort_words_ch[(int)cell[0]] += cell.append(",");
-		}
-		*/
-		// print words
-	/*
-		for (size_t t{}; t < ltrs.length(); t++) {
-			ss.str(sort_words_ch[(int)ltrs[t]]);
-			ss.clear();
-			while (getline(ss, cell, ',')) std::cout << cell << std::endl;
-		}
-		*/
-		// print number of words found and time it took to find them
-		/*
-		std::chrono::duration<double> time_span = std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
-		std::cout << count << " words found in " << time_span.count() << " secounds.\n\n";
-		*/
+		// print words in match_list
+		std::for_each(match_list.begin(), match_list.end(), [](const std::string& str) { std::cout << str << std::endl; });
+		std::cout << match_list.size() << " words found in " << time_span.count() << " secounds.\n\n";
+	}
 	return 0;
 }
