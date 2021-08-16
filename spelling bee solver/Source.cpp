@@ -1,13 +1,10 @@
-#include <fstream>
-#include <iostream>
-#include <string>
-#include <sstream>
 #include <filesystem>
-#include <limits>
+#include <iostream>
+#include <fstream>
+#include <string>
 #include <chrono>
 #include <map>
 #include <set>
-#include <algorithm>
 
 int main() {
 	// check if wordlist exists
@@ -56,9 +53,6 @@ int main() {
 
 	// main loop
 	while (true) {
-		// min and max size of words
-		// int min{}, max{};
-
 		// user input
 		std::cout << "Enter letters starting with the requried letter.\ninput: ";
 		std::string letters{};
@@ -71,34 +65,19 @@ int main() {
 		for (size_t ltr{}; ltr < letters.length(); ltr++) {
 			// lambda func
 			auto search_set = [letters, &matches](const std::string& str) {
-				if (str.find_first_not_of(letters.c_str()) == std::string::npos && str.length() >= 4) {
+				if (str.length() >= 4 &&
+					str.find_first_not_of(letters.c_str()) == std::string::npos &&
+					str.find_first_of(letters[0]) != std::string::npos) {
 					matches.insert(str);
 				}
-				/*
-				if (!(str.length() <= 4)) {
-					bool missing = false, required = false;
-					for (size_t chr1{}; chr1 < str.length(); chr1++) {
-						for (size_t chr2{}; chr2 < letters.length(); chr2++) {
-							if (str[chr1] == letters[chr2]) {
-								missing = false;
-								if (chr2 == 0 && (!required)) required = true;
-								break;
-							}
-							else missing = true;
-						}
-						if (missing) break;
-					}
-					if ((!missing) && required) matches.insert(str);
-				}
-				*/
 			};
-
+			// iterate through 
 			std::for_each(word_list[letters[ltr]].begin(), word_list[letters[ltr]].end(), search_set);
 		}
 		std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 		std::chrono::duration<double> time_span = std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
 		std::for_each(matches.begin(), matches.end(), [](const std::string& str) { std::cout << str << std::endl; });
-		std::cout << "words found in " << time_span.count() << " secounds.\n\n";
+		std::cout << matches.size() << " words found in " << time_span.count() << " secounds.\n\n";
 	}
 
 		// sort words by alpha order
