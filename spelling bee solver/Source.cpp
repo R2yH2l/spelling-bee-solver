@@ -5,6 +5,7 @@
 #include <chrono>
 #include <map>
 #include <set>
+#include <vector>
 
 int main() {
 	// path to word_list.csv
@@ -51,7 +52,7 @@ int main() {
 
 		if (letters.length() == 7) {
 			// loop through letters in letters
-			std::map<int, std::set<std::string>> match_list{};
+			std::map<int, std::map<size_t, std::vector<std::string>>> match_list{};
 
 			// get first time point
 			std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
@@ -63,7 +64,7 @@ int main() {
 					if (str.length() >= 4 &&
 						str.find_first_not_of(letters.c_str()) == std::string::npos &&
 						str.find_first_of(letters[0]) != std::string::npos) {
-						match_list[ltr].insert(str);
+						match_list[ltr][str.length()].push_back(str);
 					}
 					}
 				);
@@ -76,13 +77,22 @@ int main() {
 
 			// print words in match_list
 			size_t word_count{};
-			std::for_each(letters.begin(), letters.end(), [letters, &word_list, &word_count, &match_list](const char ltr) {
-				std::for_each(match_list[ltr].begin(), match_list[ltr].end(), [](const std::string& str) { std::cout << str << std::endl; });
-				word_count += match_list[ltr].size();
-				});
+			std::sort(letters.begin(), letters.end());
+			std::for_each(letters.begin(), letters.end(), [&word_count, &match_list](const char ltr) {
+				std::cout << "--[" << (char)toupper(ltr) << " WORDS]--\n\n";
+				std::for_each(match_list[ltr].begin(), match_list[ltr].end(), [&word_count](const std::pair<size_t, std::vector<std::string>> element) {
+					std::vector<std::string> vec = element.second;
+					std::sort(vec.begin(), vec.end());
+					std::for_each(vec.begin(), vec.end(), [](const std::string str) { std::cout << "-" << str << std::endl; });
+					std::cout << std::endl;
+					word_count += vec.size();
+					}
+				);
+				}
+			);
 
 			// print word_count and time_span
-			std::cout << std::endl << word_count << " words found in " << time_span.count() << " secounds.\n\n";
+			std::cout << word_count << " words found in " << time_span.count() << " secounds.\n\n";
 		}
 		else std::cout << "[-] you've entered " << (letters.length() < 7 ? "to few " : "to many ") << "letters seven are needed.\n\n";
 	}
